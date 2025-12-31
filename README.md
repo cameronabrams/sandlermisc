@@ -30,6 +30,10 @@ R_pv = GasConstant("bar", "m3") # bar-m3/mol-K
 
 ## Release History
 
+* 0.3.0
+    * `StateReporter` implemented
+* 0.1.1
+    * bug in converting Cp
 * 0.1.0
     * Initial release
 

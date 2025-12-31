@@ -5,7 +5,7 @@ def unpackCp(Cp: float | list[float] | dict[str, float]):
     if isinstance(Cp, float):
         a = Cp
         b, d, d = 0.0, 0.0, 0.0
-    elif isinstance(Cp, list[float]):
+    elif isinstance(Cp, list):
         a, b, c, d = Cp
     elif isinstance(Cp, dict):
         a, b, c, d = Cp['a'], Cp['b'], Cp['c'], Cp['d']
