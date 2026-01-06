@@ -46,5 +46,5 @@ class GasConstant(float):
     def __str__(self):
         return (
             f"{float(self):g} "
-            f"({self.pressure_unit}·{self.volume_unit})/(mol·K)"
+            f"({self.pressure_unit}-{self.volume_unit})/(mol-K)"
         )
