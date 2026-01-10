@@ -68,8 +68,9 @@ One can optionally provide a value for the gas constant `R` to match units of on
 
 ## Release History
 
-* 0.3.1
+* 0.3.2
     * bugfix: `unpackCp` ignored `int`s -- now fixed
+    * bugfix: `unpackCp` ignored `np.ndarray` -- now fixed
 * 0.3.0
     * `StateReporter` implemented
 * 0.1.1

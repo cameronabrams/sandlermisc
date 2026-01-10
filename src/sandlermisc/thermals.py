@@ -1,18 +1,18 @@
 import math
+import logging
 from .gas_constant import GasConstant
 
+logger = logging.getLogger(__name__)
+
 def unpackCp(Cp: float | list[float] | dict[str, float]):
-    # print(f'Unpacking Cp: {Cp} of type {type(Cp)}')
     if isinstance(Cp, float) or isinstance(Cp, int):
-        a = float(Cp)
-        b, c, d = 0.0, 0.0, 0.0
-    elif isinstance(Cp, list):
-        a, b, c, d = Cp
+        return float(Cp), 0.0, 0.0, 0.0
     elif isinstance(Cp, dict):
-        a, b, c, d = Cp['a'], Cp['b'], Cp['c'], Cp['d']
+        return Cp['a'], Cp['b'], Cp['c'], Cp['d']
+    elif hasattr(Cp, '__len__'): # list, numpy.ndarray
+        return Cp[0], Cp[1], Cp[2], Cp[3]
     else:
-        a, b, c, d = 0.0, 0.0, 0.0, 0.0
-    return a, b, c, d
+        raise TypeError(f'Unrecognized type {type(Cp)} for unpacking Cp')
 
 def DeltaH_IG(T1: float, T2: float, Cp: float | list[float] | dict[str, float] = None):
     a, b, c, d = unpackCp(Cp)
