@@ -54,7 +54,7 @@ class StateReporter:
         if isinstance(Cp, dict):
             for (key, val), fmt, tp in zip(Cp.items(), fmts, Tpowers):
                 self.add_value_to_property(f'Cp{key}', val, f'J/mol-K{tp}', fstring=fmt)
-        elif isinstance(Cp, list):
+        elif hasattr(Cp, '__len__') and len(Cp) == 4:
             for key, val, fmt, tp in zip('ABCD', Cp, fmts, Tpowers):
                 self.add_value_to_property(f'Cp{key}', val, f'J/mol-K{tp}', fstring=fmt)
         else:

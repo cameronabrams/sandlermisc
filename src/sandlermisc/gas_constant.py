@@ -8,10 +8,20 @@ class GasConstant(float):
     # base value: J/(mol*K) = Pa*m^3/(mol*K)
     _R_SI = R
 
+    _capitalizations = {
+        "pa": "Pa",
+        "kpa": "kPa",
+        "mpa": "MPa",
+        "l": "L",
+    }
+
     _pressure_units = {
         "pa":   1.0,
+        "Pa":   1.0,
         "kpa":  1e-3,
+        "kPa":  1e-3,
         "mpa":  1e-6,
+        "MPa":  1e-6,
         "bar":  1e-5,
         "atm":  1.0 / 101325.0,
     }
@@ -19,6 +29,7 @@ class GasConstant(float):
     _volume_units = {
         "m3":  1.0,
         "l":   1e3,       # 1 m^3 = 1000 L
+        "L":   1e3,       # 1 m^3 = 1000 L
         "cm3": 1e6,
     }
 
@@ -41,10 +52,14 @@ class GasConstant(float):
         return obj
 
     def __repr__(self):
-        return f"GasConstant({self.pressure_unit!r}, {self.volume_unit!r})"
+        pu = self._capitalizations.get(self.pressure_unit, self.pressure_unit)
+        vu = self._capitalizations.get(self.volume_unit, self.volume_unit)
+        return f"GasConstant({pu!r}, {vu!r})"
 
     def __str__(self):
+        pu = self._capitalizations.get(self.pressure_unit, self.pressure_unit)
+        vu = self._capitalizations.get(self.volume_unit, self.volume_unit)
         return (
             f"{float(self):g} "
-            f"({self.pressure_unit}-{self.volume_unit})/(mol-K)"
+            f"({pu}-{vu})/(mol-K)"
         )
