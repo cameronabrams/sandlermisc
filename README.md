@@ -59,7 +59,7 @@ One can optionally provide a value for the gas constant `R` to match units of on
 
 ## Release History
 
-* 0.4.0
+* 0.4.1
     * pint incorporation
     * Full smart-resolution of ThermodynamicState
 * 0.3.2
