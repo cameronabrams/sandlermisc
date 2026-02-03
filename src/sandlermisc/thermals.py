@@ -1,9 +1,6 @@
 import pint
 import math
-from scipy.constants import R as R_SI
-
-ureg = pint.UnitRegistry(autoconvert_offset_to_baseunit=True)
-R = R_SI * ureg.J / (ureg.mol * ureg.K)
+from .constants import R, ureg
 
 def unpackCp(Cp: float | list[float] | dict[str, float]):
     """
