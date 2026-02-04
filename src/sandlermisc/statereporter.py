@@ -2,15 +2,7 @@
 """
 Module for reporting state properties in a formatted manner.
 """
-
-def transfer_minus(value: float | str, units: str):
-    """ if units start with '-', transfer to value """
-    if isinstance(value, str):
-        return value, units
-    if isinstance(units, str) and units.startswith('-'):
-        value = -value
-        units = units[1:].strip()
-    return value, units
+import pint
 
 class StateReporter:
     """Class for reporting state properties."""
@@ -18,22 +10,20 @@ class StateReporter:
     def __init__(self, properties: dict = {}):
         self.properties = properties
 
-    def add_property(self, name: str, value: float | str, units: str = '', fstring : str = None):
-        value, units = transfer_minus(value, units)
-        self.properties[name] = (value, units, fstring)
+    def add_property(self, name: str, value: float | str | pint.Quantity, fstring : str = None):
+        self.properties[name] = (value, fstring)
     
-    def add_value_to_property(self, name: str, value: float | str, units: str = '', fstring : str = None):
-        value, units = transfer_minus(value, units)
+    def add_value_to_property(self, name: str, value: float | str | pint.Quantity, fstring : str = None):
         if name in self.properties:
             current_entry = self.properties[name]
             if isinstance(current_entry, list):
-                current_entry.append((value, units, fstring))
+                current_entry.append((value, fstring))
                 self.properties[name] = current_entry
             else:
-                current_entry = [current_entry, (value, units, fstring)]
+                current_entry = [current_entry, (value, fstring)]
                 self.properties[name] = current_entry
         else:
-            self.add_property(name, value, units, fstring)
+            self.add_property(name, value, fstring)
 
     def get_value(self, name: str, idx: int = 0):
         """ Get the value of a property by name. """
@@ -42,10 +32,10 @@ class StateReporter:
             return None
         if isinstance(entry, list):
             entry = entry[idx]
-            val, _, _ = entry
+            val, _ = entry
             return val
         else:
-            value, units, _ = entry
+            value, fstring = entry
             return value
 
     def pack_Cp(self, Cp: float | list[float] | dict [str, float], fmts: list[str] = ["{:.2f}"]*4):
@@ -53,14 +43,14 @@ class StateReporter:
         Tpowers = ['', '^2', '^3', '^4']
         if isinstance(Cp, dict):
             for (key, val), fmt, tp in zip(Cp.items(), fmts, Tpowers):
-                self.add_value_to_property(f'Cp{key}', val, f'J/mol-K{tp}', fstring=fmt)
+                self.add_value_to_property(f'Cp{key}', val, fstring=fmt)
         elif hasattr(Cp, '__len__') and len(Cp) == 4:
             for key, val, fmt, tp in zip('ABCD', Cp, fmts, Tpowers):
-                self.add_value_to_property(f'Cp{key}', val, f'J/mol-K{tp}', fstring=fmt)
+                self.add_value_to_property(f'Cp{key}', val, fstring=fmt)
         else:
-            self.add_property('Cp', Cp, 'J/mol-K', fstring=fmts[0])
+            self.add_property('Cp', Cp, fstring=fmts[0])
 
-    def report(self):
+    def report(self, property_notes: dict[str, str] = {}) -> str:
         """
         Return a formatted string report of the state properties.
         """
@@ -73,18 +63,20 @@ class StateReporter:
             formatted_name = name_formatter.format(name)
             if isinstance(entry, list):
                 line = ''
-                for i, (value, units, fstring) in enumerate(entry):
+                for i, (value, fstring) in enumerate(entry):
                     if fstring is not None:
                         value = fstring.format(value)
                     if not i:
-                        line = f"{formatted_name} = {value} {units}".strip()
+                        line = f"{formatted_name} = {value}".strip()
                     else:
-                        line += f" = {value} {units}"
+                        line += f" = {value}".strip()
                 report_lines.append(line)
             else:
-                value, units, fstring = entry
+                value, fstring = entry
                 if fstring is not None:
                     value = fstring.format(value)
-                line = f"{formatted_name} = {value} {units}".strip()
+                line = f"{formatted_name} = {value}".strip()
+                if name in property_notes:
+                    line += " " + property_notes[name]
                 report_lines.append(line)
         return "\n".join(report_lines)

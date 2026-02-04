@@ -79,8 +79,41 @@ class ThermodynamicState(ABC):
     _STATE_VAR_FIELDS = frozenset(_STATE_VAR_ORDERED_FIELDS).union({'x'})
     """ Fields that define the input state for caching purposes; includes vapor fraction 'x' """
 
-    _PARAMETER_FIELDS = frozenset(set())
+    _PARAMETER_ORDERED_FIELDS = ['Tc', 'Pc', 'omega', 'Cp']
+
+    _PARAMETER_FIELDS = frozenset(_PARAMETER_ORDERED_FIELDS)
     """ Fields that define parameters for the EOS; to be defined in subclasses """
+
+    def report(self, additional_vars: list[str] = [], 
+                     show_parameters: bool = True,
+                     property_notes: dict[str, str] = {}) -> str:
+        """ Generate a report of the thermodynamic state """
+        reporter = StateReporter()
+        for p in self._STATE_VAR_ORDERED_FIELDS + ['Pv']:
+            if getattr(self, p) is not None:
+                reporter.add_property(p, getattr(self, p), self.get_formatter(p))
+        for p in additional_vars:
+            if not p in self._STATE_VAR_ORDERED_FIELDS + ['Pv']:
+                if getattr(self, p) is not None:
+                    reporter.add_property(p, getattr(self, p), self.get_formatter(p))
+        if show_parameters:
+            for p in self._PARAMETER_ORDERED_FIELDS:
+                if hasattr(self, p):
+                    val = getattr(self, p)
+                    if val is not None:
+                        if p == 'Cp':
+                            reporter.pack_Cp(val, fmts=["{: 6g}", "{: 6g}", "{: 6g}", "{: 6g}"])
+                        else:
+                            reporter.add_property(p, val, "{: 6g}")
+        if self.x is not None:
+            reporter.add_property('x', self.x, f'mass fraction vapor')
+            if 0 < self.x < 1:
+                for phase, state in [('L', self.Liquid), ('V', self.Vapor)]:
+                    for p in self._STATE_VAR_ORDERED_FIELDS + ['Pv']:
+                        if not p in 'TP':
+                            if getattr(state, p) is not None:
+                                reporter.add_property(f'{p}{phase}', getattr(state, p), self.get_formatter(p))
+        return reporter.report(property_notes=property_notes)
 
     def swap_input_vars(self, input_var: str, state_var: str):
         """ Swap one of the state vars into the input var set """
@@ -162,7 +195,7 @@ class ThermodynamicState(ABC):
             's': '{: 6g}',
             'Pv': '{: 6g}',
         }
-        return formatter_map.get(field_name)
+        return formatter_map.get(field_name, '{: 6g}')
 
     def _scalarize(self):
         """ Convert all properties to scalars (not np.float64) """
@@ -175,7 +208,7 @@ class ThermodynamicState(ABC):
         if hasattr(self, 'Vapor') and self.Vapor is not None:
             self.Vapor._scalarize()
 
-    def delta(self, other: State) -> dict:
+    def delta(self, other: ThermodynamicState, additional_vars=[]) -> dict:
         """ Calculate property differences between this state and another state """
         delta_props = {}
         for p in self._STATE_VAR_FIELDS:
@@ -183,6 +216,12 @@ class ThermodynamicState(ABC):
             val2 = getattr(other, p)
             if val1 is not None and val2 is not None:
                 delta_props[p] = val2 - val1
+        for p in additional_vars:
+            if not p in self._STATE_VAR_FIELDS:
+                val1 = getattr(self, p)
+                val2 = getattr(other, p)
+                if val1 is not None and val2 is not None:
+                    delta_props[p] = val2 - val1
         delta_props['Pv'] = other.Pv - self.Pv
         return delta_props
 
@@ -196,34 +235,6 @@ class ThermodynamicState(ABC):
                 marker = '*' if var in inputs else ''
                 parts.append(f"{var}{marker}={val}")
         return f"State({self.name}: {', '.join(parts)})"
-
-    def report(self, additional_fields: list[str] = [], 
-                     parameters: list[str] = []) -> str:
-        default_fields = self._STATE_VAR_ORDERED_FIELDS + ['Pv']
-        for field in additional_fields:
-            if not field in default_fields:
-                default_fields.append(field)
-        reporter = statereporter.StateReporter()
-        for p in default_fields:
-            if getattr(self, p) is not None:
-                reporter.add_property(p, getattr(self, p).m, self.get_default_unit(p), self.get_formatter(p))
-        for p in parameters:
-            if hasattr(self, p):
-                val = getattr(self, p)
-                if val is not None:
-                    if p != 'Cp':
-                        reporter.add_property(p, val, None, None)
-                    else:
-                        reporter.pack_Cp(val, fmts=["{:.2f}", "{:.3e}", "{:.3e}", "{:.3e}"])
-        if self.x is not None:
-            reporter.add_property('x', self.x, f'mass fraction vapor')
-            if 0 < self.x < 1:
-                for phase, state in [('L', self.Liquid), ('V', self.Vapor)]:
-                    for p in default_fields:
-                        if not p in 'TP':
-                            if getattr(state, p) is not None:
-                                reporter.add_property(f'{p}{phase}', getattr(state, p).m, self.get_default_unit(p), self.get_formatter(p))
-        return reporter.report()
 
     @abstractmethod
     def resolve(self) -> bool:
