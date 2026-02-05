@@ -73,24 +73,24 @@ class ThermodynamicState(ABC):
     Vapor: ThermodynamicState = None
     """ Vapor phase state when saturated """
 
-    _STATE_VAR_ORDERED_FIELDS = ['T', 'P', 'v', 's', 'h', 'u']
+    _STATE_VAR_ORDERED_FIELDS = ['T', 'P', 'v', 'u', 'h', 's']
     """ Ordered fields that define the input state """
 
     _STATE_VAR_FIELDS = frozenset(_STATE_VAR_ORDERED_FIELDS).union({'x'})
     """ Fields that define the input state for caching purposes; includes vapor fraction 'x' """
 
-    _PARAMETER_ORDERED_FIELDS = ['Tc', 'Pc', 'omega', 'Cp']
+    _PARAMETER_ORDERED_FIELDS = []
 
     _PARAMETER_FIELDS = frozenset(_PARAMETER_ORDERED_FIELDS)
     """ Fields that define parameters for the EOS; to be defined in subclasses """
 
     def report(self, additional_vars: list[str] = [], 
-                     show_parameters: bool = True,
+                     show_parameters: bool = False,
                      property_notes: dict[str, str] = {}) -> str:
         """ Generate a report of the thermodynamic state """
         reporter = StateReporter()
         for p in self._STATE_VAR_ORDERED_FIELDS + ['Pv']:
-            if getattr(self, p) is not None:
+            if getattr(self, p, None) is not None:
                 reporter.add_property(p, getattr(self, p), self.get_formatter(p))
         for p in additional_vars:
             if not p in self._STATE_VAR_ORDERED_FIELDS + ['Pv']:
@@ -98,20 +98,19 @@ class ThermodynamicState(ABC):
                     reporter.add_property(p, getattr(self, p), self.get_formatter(p))
         if show_parameters:
             for p in self._PARAMETER_ORDERED_FIELDS:
-                if hasattr(self, p):
-                    val = getattr(self, p)
-                    if val is not None:
-                        if p == 'Cp':
-                            reporter.pack_Cp(val, fmts=["{: 6g}", "{: 6g}", "{: 6g}", "{: 6g}"])
-                        else:
-                            reporter.add_property(p, val, "{: 6g}")
+                val = getattr(self, p, None)
+                if val is not None:
+                    if p == 'Cp':
+                        reporter.pack_Cp(val, fmts=["{: 6g}", "{: 6g}", "{: 6g}", "{: 6g}"])
+                    else:
+                        reporter.add_property(p, val, "{: 6g}")
         if self.x is not None:
-            reporter.add_property('x', self.x, f'mass fraction vapor')
+            reporter.add_property('x', self.x)
             if 0 < self.x < 1:
                 for phase, state in [('L', self.Liquid), ('V', self.Vapor)]:
                     for p in self._STATE_VAR_ORDERED_FIELDS + ['Pv']:
                         if not p in 'TP':
-                            if getattr(state, p) is not None:
+                            if getattr(state, p, None) is not None:
                                 reporter.add_property(f'{p}{phase}', getattr(state, p), self.get_formatter(p))
         return reporter.report(property_notes=property_notes)
 
@@ -222,7 +221,6 @@ class ThermodynamicState(ABC):
                 val2 = getattr(other, p)
                 if val1 is not None and val2 is not None:
                     delta_props[p] = val2 - val1
-        delta_props['Pv'] = other.Pv - self.Pv
         return delta_props
 
     def __repr__(self):
